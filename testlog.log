@@ -1,0 +1,91 @@
+--- config file : ssd.conf 
+--- trace file : ./trace/trace.txt 
+RAM_READ_DELAY: 0.0100000000000000
+RAM_WRITE_DELAY: 0.0100000000000000
+BUS_CTRL_DELAY: 2.0000000000000000
+BUS_DATA_DELAY: 10.0000000000000000
+BUS_MAX_CONNECT: 8
+BUS_TABLE_SIZE: 512
+SSD_SIZE: 1
+PACKAGE_SIZE: 1
+DIE_SIZE: 1
+PLANE_SIZE: 4
+PLANE_REG_READ_DELAY: 0.0100000000000000
+PLANE_REG_WRITE_DELAY: 0.0100000000000000
+BLOCK_SIZE: 4
+BLOCK_ERASES: 100000
+BLOCK_ERASE_DELAY: 2000.0000000000000000
+PAGE_READ_DELAY: 25.0000000000000000
+PAGE_WRITE_DELAY: 300.0000000000000000
+PAGE_SIZE: 4096
+PAGE_ENABLE_DATA: 1
+MAP_DIRECTORY_SIZE: 100
+FTL_IMPLEMENTATION: 0
+PARALLELISM_MODE: 1
+RAID_NUMBER_OF_PHYSICAL_SSDS: 1
+LOGIC_NUMBER: 5
+MT_IMPL: 1
+CATCHMT_SIZE: 6
+Number of addressable blocks: 4
+------ start -----
+Writing to logical address: 1
+Executing stage: 0
+ 0[-1] |  1[0] |  2[-1] |  3[-1] |  4[-1] | 
+-------------------------------------------------------------
+execution time is : 312.020000
+Writing to logical address: 2
+Executing stage: 0
+ 0[-1] |  1[0] |  2[1] |  3[-1] |  4[-1] | 
+-------------------------------------------------------------
+execution time is : 324.020000
+Writing to logical address: 3
+Executing stage: 0
+helllllllllo
+ 0[-1] |  1[0] |  2[1] |  3[1] |  4[-1] | 
+-------------------------------------------------------------
+execution time is : 336.020000
+Writing to logical address: 3
+Executing stage: 0
+helllllllllo
+ 0[-1] |  1[0] |  2[1] |  3[0] |  4[-1] | 
+-------------------------------------------------------------
+execution time is : 348.020000
+Writing to logical address: 1
+Executing stage: 0
+===== this event is happend in the past XD ! 0[-1] |  1[0] |  2[1] |  3[0] |  4[-1] | 
+-------------------------------------------------------------
+execution time is : 360.020000
+Writing to logical address: 2
+Executing stage: 0
+===== this event is happend in the past XD ! 0[-1] |  1[0] |  2[1] |  3[0] |  4[-1] | 
+-------------------------------------------------------------
+execution time is : 372.020000
+Writing to logical address: 3
+Executing stage: 0
+helllllllllo
+ 0[-1] |  1[0] |  2[1] |  3[2] |  4[-1] | 
+-------------------------------------------------------------
+execution time is : 384.020000
+Writing to logical address: 4
+Executing stage: 0
+ 0[-1] |  1[0] |  2[1] |  3[2] |  4[3] | 
+-------------------------------------------------------------
+execution time is : 396.020000
+Total execution time 2833.160000
+Statistics:
+-----------
+FTL Reads: 70	 Writes: 4	 Erases: 0	 Trims: 0
+GC  Reads: 0	 Writes: 0	 Erases: 0
+WL  Reads: 0	 Writes: 0	 Erases: 0
+Log FTL Switch: 0 Partial: 0 Full: 0
+Page FTL Convertions: 0
+Cache Hits: 0 Faults: 0 Hit Ratio: -nan
+Memory Consumption:
+Tranlation: 0 Cache: 0
+Reads: 0 	Writes: 0
+-----------
+MT_Statistics:
+-----------
+MT Reads: 0	 Writes: 6	 Erases: 3
+MT PPN_USED: 4
+-----------
