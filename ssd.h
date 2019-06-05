@@ -219,7 +219,7 @@ enum block_type {LOG, DATA, LOG_SEQ};
 /*
  * Enumeration of the different FTL implementations.
  */
-enum ftl_implementation {IMPL_PAGE, IMPL_BAST, IMPL_FAST, IMPL_DFTL, IMPL_BIMODAL};
+enum ftl_implementation {IMPL_PAGE, IMPL_BAST, IMPL_FAST, IMPL_DFTL, IMPL_BIMODAL, IMPL_NEW};
 
 
 #define BOOST_MULTI_INDEX_ENABLE_SAFE_MODE 1
@@ -805,6 +805,25 @@ protected:
 	Controller &controller;
 };
 
+class FtlImpl_NEWftl : public FtlParent
+{
+public:
+	FtlImpl_NEWftl(Controller &controller);
+	~FtlImpl_NEWftl();
+	enum status read(Event &event);
+	enum status write(Event &event);
+	enum status trim(Event &event);
+	//-------------------------------------
+	int find_free_page(Event &event);
+	int search_in_page(Event &event);
+	int search_in_catch(Event &event);
+private:
+	ulong currentPage;
+	ulong numPagesActive;
+	bool *trim_map;
+	long *map;
+};
+
 class FtlImpl_Page : public FtlParent
 {
 public:
@@ -813,31 +832,13 @@ public:
 	enum status read(Event &event);
 	enum status write(Event &event);
 	enum status trim(Event &event);
-	//-------------------------------------
-	int find_free_page(Event &event);
-	int search_in_page(Event &event);
-	int search_in_catch(Event &event);
-	// int find_free_block(Event &event);
-	// void select_planes(Event &event, int die_num);
-	// void increase_bitmap(int pbn);
-	// void GarbageCollection(Event &event, int plane_num);
-	// void WearLeveling(void);
-	// int find_erasable_block(int plane_num);
-	// int sort_blocks(int *arr);
-	// void free_up_block(int block_num, int rs);
-	////////////////////////////
-	// void PrintSsd_page(void);
-	// void PrintSsd_MT(void);
-	//-------------------------------------
 private:
 	ulong currentPage;
 	ulong numPagesActive;
 	bool *trim_map;
 	long *map;
-	//-------------------------------------
-	
-	//-------------------------------------
 };
+
 
 class FtlImpl_Bast : public FtlParent
 {
@@ -1049,6 +1050,7 @@ public:
 	friend class FtlImpl_Dftl;
 	friend class FtlImpl_BDftl;
 	friend class Block_manager;
+	friend class FtlImpl_NEWftl;
 
 	Stats stats;
 	// stats of Mapping Table

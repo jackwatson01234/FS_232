@@ -26,109 +26,20 @@
 #include "../ssd.h"
 
 using namespace ssd;
-//////////////////////////////////////////////////////////////////////////
-
-// store state and data for each page 
-// state => 0:empty 1:valid 2:invalid
-// data => a character that recive from controller
-struct Pages
-{
-	enum page_state state; 
-	char data;
-};
-
-// store number of emttp and valid page of each block 
-struct Blocks
-{
-	int empty;
-	int valid;
-};
-// catch struct that keep data and index of that ppn
-struct CatchMTs
-{
-	int index;
-	char data;
-};
-
-// create object of block and page struct to use az an array
-Blocks *block;
-Pages *page;
-CatchMTs *catchmt;
-
-
-int *MT; // definition of mapping table
-int last_page; // a flag for keeping last number of page that used
-
-int page_number; // number of pages in ssd
-int block_number; // number of block in ssd
-int plane_number; // number of plane in ssd
-int die_number; // number of die in ssd
-int package_number; //number of package in ssd
-
-/////////////////////////////////////////////////////////////////////////
 
 FtlImpl_Page::FtlImpl_Page(Controller &controller):
 	FtlParent(controller)
 {
 	trim_map = new bool[NUMBER_OF_ADDRESSABLE_BLOCKS * BLOCK_SIZE];
-	/////////////////////////////////////////////////////////////////////
-	//calculation of page, block, plane, die, package number
-	page_number = (SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE) / VIRTUAL_PAGE_SIZE;
-	block_number = (SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE) / VIRTUAL_PAGE_SIZE;
-	plane_number = (SSD_SIZE * PACKAGE_SIZE * DIE_SIZE) / VIRTUAL_PAGE_SIZE;
-	die_number = (SSD_SIZE * PACKAGE_SIZE) / VIRTUAL_PAGE_SIZE;
-	package_number = SSD_SIZE / VIRTUAL_PAGE_SIZE;
-	/////////////////////////////////////////////////////////////////////
-	//create page array and initialize it
-	page = new Pages[page_number];	
-	for(int i = 0; i < page_number; i++)
-	{
-		page[i].state = EMPTY;
-		page[i].data = '-';
-	}
-	/////////////////////////////////////////////////////////////////////
-	//create block array and initialize it
-	block = new Blocks[block_number];
-	for(int i = 0; i < block_number; i++)
-	{
-		block[i].empty = BLOCK_SIZE;
-		block[i].valid = 0;
 
-	}
-	
-	switch (MT_IMPL)
-	{
-		case 1: //direct map
-			MT = new int[LOGIC_NUMBER];
-			for(int i = 0; i < (int) LOGIC_NUMBER; i++)
-			{
-				MT[i]= -1;
+	numPagesActive = 0;
 
-			}
-			
-			break;
-		case 2:
-
-			break;
-		default:
-			break;
-	}
-	catchmt = new CatchMTs[CATCHMT_SIZE];
-	for (int i = 0; i < (int) CATCHMT_SIZE; i++)
-	{
-		catchmt[i].data = '-';
-		catchmt[i].index = -1;
-	}
-	
-
-	last_page = 0;	
-	printf("------ start -----\n");
-	/////////////////////////////////////////////////////////////////////
 	return;
-} 
+}
 
 FtlImpl_Page::~FtlImpl_Page(void)
 {
+
 	return;
 }
 
@@ -136,20 +47,8 @@ enum status FtlImpl_Page::read(Event &event)
 {
 	event.set_address(Address(0, PAGE));
 	event.set_noop(true);
-	
-	// checking for data validation in ssd, MT must be have a ppn for that 
-	if (MT[event.get_logical_address()] != -1) {
-		int ppn = MT[(int)event.get_logical_address()] ;
-		printf("data is : %c\n", page[ppn].data);
-		// read data from page array and show it
-		controller.stats.numFTLRead++;
-	}
-	else
-	{
-		printf("--------------there is no data in this lpn!\n");
-	}
-	// add number of reading from mapping table
-	controller.MTStats.numMTRead++;
+
+	controller.stats.numFTLRead++;
 
 	return controller.issue(event);
 }
@@ -158,155 +57,63 @@ enum status FtlImpl_Page::write(Event &event)
 {
 	event.set_address(Address(1, PAGE));
 	event.set_noop(true);
-	
-	// sreaching data in page array
-	// if data is found, return number of page that this data store on it
-	// if not return -1
-	int index  = search_in_catch(event);
-	if (index == -1)
-	{
-		int ppn = search_in_page(event);  /// ------------ ask that -------
-		if (ppn != -1) {
-			if (MT[event.get_logical_address()] != -1 && MT[event.get_logical_address()] == ppn) 
-			{
-				printf("===== this event is happend in the past XD !");
-			}
-			else{
-				controller.MTStats.numMTErase++;
-				controller.issueRamWrite(event); //timing
-				printf("=== timing ===\n");
-				MT[event.get_logical_address()] = ppn;
-				controller.issueRamRead(event); //timing
-				printf("=== timing ===\n");
-				controller.MTStats.numMTWrite++; 
-				printf("helllllllllo\n");
-			}
-		}
-		else
-		{
-			// find a free page for storing new data and return ppn
-			// after that mapping table must be set with new address 
-			ppn = find_free_page(event);
-			page[ppn].data = event.get_data();
-			controller.issueBusLock(event, BUS_CTRL_DELAY + BUS_DATA_DELAY); //timing  /// this line must be check!
-			printf("=== timing ===\n");
-			controller.issueWrite(event); //timing
-			printf("=== timing ===\n");
-			controller.stats.numFTLWrite++;
-			// data in ppn --- must be added
-			controller.MTStats.PPN_USED ++;
-			if (MT[event.get_logical_address()] != -1) 
-			{ 
-				controller.MTStats.numMTErase++; 
-				printf("helllllllllo\n");
-			}
-			controller.issueRamRead(event); //timing
-			printf("=== timing ===\n");
-			MT[event.get_logical_address()] = ppn;
-			controller.issueRamWrite(event); //timing
-			printf("=== timing ===\n");
-			controller.MTStats.numMTWrite++; 
-		}
-		// find row in catch mapping table that must be deleted!
-		// must be added later	// catch_allocation();
-		///////////////////////////////////////////////////////
-		catchmt[ppn % CATCHMT_SIZE].data = event.get_data();
-		catchmt[ppn % CATCHMT_SIZE].index = ppn;
-		controller.issueRamWrite(event); //timing    /// how many is needed? 2 or 1?
-		printf("=== timing ===\n");
-		///////////////////////////////////////////////////////
-	}
-	else
-	{
-		if (MT[event.get_logical_address()] != -1 && MT[event.get_logical_address()] == index) 
-			{
-				printf("===== this event is happend in the past XD ! for index :)");
-			}
-			else{
-				controller.MTStats.numMTErase++;
-				MT[event.get_logical_address()] = index;
-				controller.MTStats.numMTWrite++; 
-				controller.issueRamRead(event); //timing
-				printf("=== timing ===\n");
-				printf("byyyyyyyyyyye\n");
-			}
-	}
-	
-	printf("\n------- CATCH ------\n");
-	for (int i = 0; i < (int) CATCHMT_SIZE; i++)
-	{
-		printf(" %d[%c][%d] | ", i , catchmt[i].data, catchmt[i].index);
-	}
-	printf("\n------- Page ------\n");
-	for (int i = 0; i < (int) CATCHMT_SIZE; i++)
-	{
-		printf(" %d[%c] | ", i , page[i].data);
-	}
-	printf("\n------ MT -------\n");
-	for (int i = 0; i < (int) LOGIC_NUMBER; i++)
-	{
-		printf(" %d[%d] | ", i , MT[i]);
-	}
-	printf("\n");
-	printf("-------------------------------------------------------------\n");
 
-	// (void) event.incr_time_taken(read_delay * event.get_size());
-	// controller.issueBusLock(event, BUS_CTRL_DELAY + BUS_DATA_DELAY);
-	// controller.issueRamRead(event);
-	// controller.issueRamWrite(event);
-	// controller.issueWrite(event);
-	// return controller.issue(event);
-	return SUCCESS;
+	controller.stats.numFTLWrite++;
+
+	if (numPagesActive == NUMBER_OF_ADDRESSABLE_BLOCKS * BLOCK_SIZE)
+	{
+		numPagesActive -= BLOCK_SIZE;
+
+		Event eraseEvent = Event(ERASE, event.get_logical_address(), 1, event.get_start_time(), '-');
+		eraseEvent.set_address(Address(0, PAGE));
+
+		if (controller.issue(eraseEvent) == FAILURE) printf("Erase failed");
+
+		event.incr_time_taken(eraseEvent.get_time_taken());
+
+		controller.stats.numFTLErase++;
+	}
+
+	numPagesActive++;
+
+
+	return controller.issue(event);
 }
- 
+
 enum status FtlImpl_Page::trim(Event &event)
 {
 	controller.stats.numFTLTrim++;
+
+	uint dlpn = event.get_logical_address();
+
+	if (!trim_map[event.get_logical_address()])
+		trim_map[event.get_logical_address()] = true;
+
+	// Update trim map and update block map if all pages are trimmed. i.e. the state are reseted to optimal.
+	long addressStart = dlpn - dlpn % BLOCK_SIZE;
+	bool allTrimmed = true;
+	for (uint i=addressStart;i<addressStart+BLOCK_SIZE;i++)
+	{
+		if (!trim_map[i])
+			allTrimmed = false;
+	}
+
+	if (allTrimmed)
+	{
+		Event eraseEvent = Event(ERASE, event.get_logical_address(), 1, event.get_start_time(), '-');
+		eraseEvent.set_address(Address(0, PAGE));
+
+		if (controller.issue(eraseEvent) == FAILURE) printf("Erase failed");
+
+		event.incr_time_taken(eraseEvent.get_time_taken());
+
+		for (uint i=addressStart;i<addressStart+BLOCK_SIZE;i++)
+			trim_map[i] = false;
+
+		controller.stats.numFTLErase++;
+
+		numPagesActive -= BLOCK_SIZE;
+	}
+
 	return SUCCESS;
 }
-
-// return address of last free page
-int FtlImpl_Page::find_free_page(Event &event)
-{
-	return last_page ++;
-}
-
-// sreach in page array to find recived data from controller
-int FtlImpl_Page::search_in_page(Event &event)
-{
-	int time_taken = 0;
-	for(int i = 0; i < page_number; i++)
-	{
-		time_taken = time_taken + BUS_CTRL_DELAY + BUS_DATA_DELAY;
-		controller.issueRead(event); //timing
-		printf("=== timing ===\n");
-		if (page[i].data == '-') { 	
-			break; 
-		}
-		controller.stats.numFTLRead++;
-		if (page[i].data == event.get_data()) {
-			controller.issueBusLock(event , BUS_CTRL_DELAY + BUS_DATA_DELAY); //timing
-			printf("=== timing ===\n");
-			return i;
-		}
-	}
-	controller.issueBusLock(event, time_taken); //timing
-	printf("=== timing ===\n");
-	return -1;
-}
-
-int FtlImpl_Page::search_in_catch(Event &event)
-{
-	for (int i = 0; i < (int) CATCHMT_SIZE; i++)
-	{
-		controller.issueRamRead(event); //timing
-		printf("=== timing ===\n");
-		if (catchmt[i].index == -1) { return -1; }
-		if (catchmt[i].data == event.get_data())
-		{
-			return i;
-		}
-	}
-	return -1;
-}
-
