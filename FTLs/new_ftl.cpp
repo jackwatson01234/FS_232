@@ -44,7 +44,7 @@ struct Blocks
 	int valid;
 };
 // catch struct that keep data and index of that ppn
-struct CatchMTs
+struct CacheMTs
 {
 	int index;
 	char data;
@@ -53,7 +53,7 @@ struct CatchMTs
 // create object of block and page struct to use az an array
 Blocks *block;
 Pages *page;
-CatchMTs *catchmt;
+CacheMTs *cachemt;
 
 
 int *MT; // definition of mapping table
@@ -113,11 +113,11 @@ FtlImpl_NEWftl::FtlImpl_NEWftl(Controller &controller):
 		default:
 			break;
 	}
-	catchmt = new CatchMTs[CATCHMT_SIZE];
-	for (int i = 0; i < (int) CATCHMT_SIZE; i++)
+	cachemt = new CacheMTs[CACHEMT_SIZE];
+	for (int i = 0; i < (int) CACHEMT_SIZE; i++)
 	{
-		catchmt[i].data = '-';
-		catchmt[i].index = -1;
+		cachemt[i].data = '-';
+		cachemt[i].index = -1;
 	}
 	
 
@@ -212,8 +212,8 @@ enum status FtlImpl_NEWftl::write(Event &event)
 		// find row in catch mapping table that must be deleted!
 		// must be added later	// catch_allocation();
 		///////////////////////////////////////////////////////
-		catchmt[ppn % CATCHMT_SIZE].data = event.get_data();
-		catchmt[ppn % CATCHMT_SIZE].index = ppn;
+		cachemt[ppn % CACHEMT_SIZE].data = event.get_data();
+		cachemt[ppn % CACHEMT_SIZE].index = ppn;
 		controller.issueRamWrite(event); //timing    /// how many is needed? 2 or 1?
 		printf("=== timing ===\n");
 		///////////////////////////////////////////////////////
@@ -235,12 +235,12 @@ enum status FtlImpl_NEWftl::write(Event &event)
 	}
 	
 	printf("\n------- CATCH ------\n");
-	for (int i = 0; i < (int) CATCHMT_SIZE; i++)
+	for (int i = 0; i < (int) CACHEMT_SIZE; i++)
 	{
-		printf(" %d[%c][%d] | ", i , catchmt[i].data, catchmt[i].index);
+		printf(" %d[%c][%d] | ", i , cachemt[i].data, cachemt[i].index);
 	}
 	printf("\n------- Page ------\n");
-	for (int i = 0; i < (int) CATCHMT_SIZE; i++)
+	for (int i = 0; i < (int) CACHEMT_SIZE; i++)
 	{
 		printf(" %d[%c] | ", i , page[i].data);
 	}
@@ -299,12 +299,12 @@ int FtlImpl_NEWftl::search_in_page(Event &event)
 
 int FtlImpl_NEWftl::search_in_catch(Event &event)
 {
-	for (int i = 0; i < (int) CATCHMT_SIZE; i++)
+	for (int i = 0; i < (int) CACHEMT_SIZE; i++)
 	{
 		controller.issueRamRead(event); //timing
 		printf("=== timing ===\n");
-		if (catchmt[i].index == -1) { return -1; }
-		if (catchmt[i].data == event.get_data())
+		if (cachemt[i].index == -1) { return -1; }
+		if (cachemt[i].data == event.get_data())
 		{
 			return i;
 		}

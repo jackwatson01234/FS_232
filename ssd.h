@@ -163,7 +163,7 @@ extern const uint RAID_NUMBER_OF_PHYSICAL_SSDS;
 
 extern const uint LOGIC_NUMBER;
 extern const uint MT_IMPL;
-extern const uint CATCHMT_SIZE;
+extern const uint CACHEMT_SIZE;
 ////////////////////////////////////////////////////////////
 
 /*

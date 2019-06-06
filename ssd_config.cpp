@@ -177,7 +177,7 @@ uint LOGIC_NUMBER = 8;
 /* implementation of mapping table */
 uint MT_IMPL = 1;
 /* size of catchmt for using in page ftl */
-uint CATCHMT_SIZE = 4;
+uint CACHEMT_SIZE = 4;
 
 void load_entry(char *name, double value, uint line_number) {
 	/* cheap implementation - go through all possibilities and match entry */
@@ -243,8 +243,8 @@ void load_entry(char *name, double value, uint line_number) {
 		LOGIC_NUMBER = value;
 	else if (!strcmp(name, "MT_IMPL"))
 		MT_IMPL = value;
-	else if (!strcmp(name, "CATCHMT_SIZE"))
-		CATCHMT_SIZE = value;
+	else if (!strcmp(name, "CACHEMT_SIZE"))
+		CACHEMT_SIZE = value;
 	else
 		fprintf(stderr, "Config file parsing error on line %u\n", line_number);
 	return;
@@ -318,7 +318,7 @@ void print_config(FILE *stream) {
 	fprintf(stream, "RAID_NUMBER_OF_PHYSICAL_SSDS: %i\n", RAID_NUMBER_OF_PHYSICAL_SSDS);
 	fprintf(stream, "LOGIC_NUMBER: %i\n", LOGIC_NUMBER);
 	fprintf(stream, "MT_IMPL: %i\n", MT_IMPL);
-	fprintf(stream, "CATCHMT_SIZE: %i\n", CATCHMT_SIZE);
+	fprintf(stream, "CACHEMT_SIZE: %i\n", CACHEMT_SIZE);
 
 	return;
 }
